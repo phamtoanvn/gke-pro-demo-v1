@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pro-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pro-backend
+  template:
+    metadata:
+      labels:
+        app: pro-backend
+    spec:
+      containers:
+      # 1. Container chính (Web App)
+      - name: web-app
+        # Thay PROJECT_ID bằng ID của bạn (project-128ee33c...)
+        image: gcr.io/project-128ee33c-2b96-46b3-8ec/pro-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        # Lấy thông tin đăng nhập từ Secret ta vừa tạo
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: database
+        resources:
+          requests:
+            cpu: "250m"
+      
+      # 2. Container phụ (Cloud SQL Auth Proxy) - Kỹ thuật Sidecar an toàn
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.1.0
+        args:
+          - "--port=5432"
+          - "project-128ee33c-2b96-46b3-8ec:us-central1:gke-sql-db" # Connection Name của bạn
+        securityContext:
+          runAsNonRoot: true

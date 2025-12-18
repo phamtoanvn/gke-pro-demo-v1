@@ -28,9 +28,9 @@ jobs:
       name: 'Authenticate to Google Cloud'
       uses: 'google-github-actions/auth@v1'
       with:
-        workload_identity_provider: 'projects/265427108488/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-        service_account: '265427108488-compute@developer.gserviceaccount.com'
+        workload_identity_provider: 'projects/265427108488/locations/global/workloadIdentityPools/github-pool-v2/providers/github-provider-v2'       
         # Dòng quan trọng mới thêm:
+        service_account: 'github-deployer@project-128ee33c-2b96-46b3-8ec.iam.gserviceaccount.com'
         project_id: 'project-128ee33c-2b96-46b3-8ec'
 
     - name: Set up Cloud SDK

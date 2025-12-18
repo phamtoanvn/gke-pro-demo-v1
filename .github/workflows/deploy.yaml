@@ -1,0 +1,60 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches: [ "master" ]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: microservices-cluster
+  GKE_ZONE: us-central1-a
+  IMAGE: pro-backend
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # KẾT NỐI BẢO MẬT (WIF) - ĐÃ FIX LỖI
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: 'projects/265427108488/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        service_account: '265427108488-compute@developer.gserviceaccount.com'
+        # Dòng quan trọng mới thêm:
+        project_id: 'project-128ee33c-2b96-46b3-8ec'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Configure Docker
+      run: |-
+        gcloud auth configure-docker
+
+    - name: Get GKE Credentials
+      uses: google-github-actions/get-gke-credentials@v1
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+
+    - name: Build
+      run: |-
+        docker build -t gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA ./src
+
+    - name: Publish
+      run: |-
+        docker push gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA
+
+    - name: Deploy
+      run: |-
+        sed -i "s|image: .*|image: gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA|g" ./k8s/deployment.yaml
+        kubectl apply -f ./k8s/
